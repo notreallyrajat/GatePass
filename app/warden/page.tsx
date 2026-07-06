@@ -26,6 +26,30 @@ export default function WardenDashboard() {
   const [records, setRecords] = useState<GatePass[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/");
+        return;
+      }
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+        
+      if (profile?.role !== "warden") {
+        router.replace("/");
+      } else {
+        setIsAuthorized(true);
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -151,6 +175,14 @@ export default function WardenDashboard() {
   // -----------------------------------------------------
   // VIEW: DASHBOARD
   // -----------------------------------------------------
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto flex items-center justify-center w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
   if (view === "dashboard") {
     return (
       <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto relative font-sans w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh] sm:overflow-y-auto sm:border-[8px] sm:border-slate-800 scrollbar-hide">

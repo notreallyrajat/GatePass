@@ -18,6 +18,30 @@ export default function VisitorDashboard() {
   const [records, setRecords] = useState<GatePass[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/");
+        return;
+      }
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+        
+      if (profile?.role !== "visitor") {
+        router.replace("/");
+      } else {
+        setIsAuthorized(true);
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const fetchRecords = async () => {
     setIsLoading(true);
@@ -41,6 +65,14 @@ export default function VisitorDashboard() {
     await supabase.auth.signOut();
     router.push("/");
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto flex items-center justify-center w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto font-sans pb-20 w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh] sm:overflow-y-auto sm:border-[8px] sm:border-slate-800 scrollbar-hide">
