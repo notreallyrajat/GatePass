@@ -24,6 +24,7 @@ interface GatePass {
 export default function AdminDashboard() {
   const [view, setView] = useState<View>("dashboard");
   const [records, setRecords] = useState<GatePass[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<GatePass | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -85,6 +86,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (view === "records") {
       fetchRecords();
+      setSelectedRecord(null);
     }
   }, [view]);
 
@@ -136,11 +138,11 @@ export default function AdminDashboard() {
         // Note: Assuming a storage bucket named 'images' exists. 
         // If it fails, we fall back to null.
         const { error: uploadError } = await supabase.storage
-          .from('images')
+          .from('gatepass-images')
           .upload(filePath, imageFile, { upsert: true });
 
         if (!uploadError) {
-          const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+          const { data } = supabase.storage.from('gatepass-images').getPublicUrl(filePath);
           uploadedImageUrl = data.publicUrl;
         } else {
           console.warn("Storage upload failed, proceeding without image:", uploadError);
@@ -218,6 +220,67 @@ export default function AdminDashboard() {
   // VIEW: RECORDS
   // -----------------------------------------------------
   if (view === "records") {
+    if (selectedRecord) {
+      const date = new Date(selectedRecord.created_at);
+      const formattedDate = `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      
+      return (
+        <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto font-sans pb-20 w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh] sm:overflow-y-auto sm:border-[8px] sm:border-slate-800 scrollbar-hide">
+          <header className="flex items-center gap-3 mt-6 mb-6 px-2 sticky top-0 bg-[#F8F9FA]/90 backdrop-blur-md py-2 z-10">
+            <button onClick={() => setSelectedRecord(null)} className="p-2 -ml-2 text-slate-800 active:bg-slate-200 rounded-full transition-colors">
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-[22px] font-bold text-slate-900 tracking-tight">Record Details</h1>
+          </header>
+
+          <div className="px-2">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center mb-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/10 to-transparent"></div>
+              <div className="w-32 h-32 rounded-full bg-slate-100 mb-4 overflow-hidden border-4 border-white shadow-lg relative z-10">
+                {selectedRecord.image_url ? (
+                  <img src={selectedRecord.image_url} alt={selectedRecord.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-4xl">
+                    {selectedRecord.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 text-center relative z-10">{selectedRecord.name}</h2>
+              <p className="text-slate-500 font-medium text-sm mt-1 relative z-10">{formattedDate}</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Class & Sec</p>
+                  <p className="font-semibold text-slate-900 text-lg">{selectedRecord.class}{selectedRecord.section ? `-${selectedRecord.section}` : ''}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">House</p>
+                  <p className="font-semibold text-slate-900 text-lg">{selectedRecord.house || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Age</p>
+                  <p className="font-semibold text-slate-900 text-lg">{selectedRecord.age || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Gender</p>
+                  <p className="font-semibold text-slate-900 text-lg">{selectedRecord.gender || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-slate-100">
+                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-2">Reason for Pass</p>
+                <div className="font-medium text-slate-800 bg-[#F4F6F9] p-4 rounded-2xl leading-relaxed">
+                  {selectedRecord.reason || 'No reason provided'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#F8F9FA] p-4 sm:p-6 max-w-[430px] mx-auto font-sans pb-20 w-full shadow-2xl shadow-slate-200/50 sm:rounded-[2.5rem] sm:my-8 sm:h-[90vh] sm:overflow-y-auto sm:border-[8px] sm:border-slate-800 scrollbar-hide">
         <header className="flex items-center gap-3 mt-6 mb-6 px-2 sticky top-0 bg-[#F8F9FA]/90 backdrop-blur-md py-2 z-10">
@@ -238,7 +301,11 @@ export default function AdminDashboard() {
               const formattedDate = `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
               
               return (
-                <div key={record.id} className="bg-white p-4 rounded-3xl shadow-[0_4px_14px_0_rgba(0,0,0,0.04)] flex gap-4 items-center border border-slate-100">
+                <div 
+                  key={record.id} 
+                  onClick={() => setSelectedRecord(record)}
+                  className="bg-white p-4 rounded-3xl shadow-[0_4px_14px_0_rgba(0,0,0,0.04)] flex gap-4 items-center border border-slate-100 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                >
                   <div className="w-[52px] h-[52px] rounded-full bg-slate-100 shrink-0 overflow-hidden shadow-inner border border-slate-200/50">
                     {record.image_url ? (
                       <img src={record.image_url} alt={record.name} className="w-full h-full object-cover" />
