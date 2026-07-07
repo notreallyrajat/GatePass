@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { LogOut, ArrowLeft, Camera, Image as ImageIcon, Loader2, X, Trash2 } from "lucide-react";
+import { LogOut, ArrowLeft, Camera, Image as ImageIcon, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -102,33 +102,6 @@ export default function WardenDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
-  };
-
-  const handleDeleteRecord = async (id: string, imageUrl: string) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-
-    try {
-      setIsLoading(true);
-      
-      // Attempt to delete image if exists
-      if (imageUrl) {
-        const urlParts = imageUrl.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        if (fileName) {
-          await supabase.storage.from('gatepass-images').remove([`gate-passes/${fileName}`]);
-        }
-      }
-
-      const { error } = await supabase.from("gate_passes").delete().eq("id", id);
-      if (error) throw error;
-      
-      setRecords(records.filter(r => r.id !== id));
-      setSelectedRecord(null);
-    } catch (err: any) {
-      alert("Error deleting record: " + err.message);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,13 +231,6 @@ export default function WardenDashboard() {
               <ArrowLeft className="w-6 h-6" />
             </button>
             <h1 className="text-[22px] font-bold text-slate-900 tracking-tight flex-1">Record Details</h1>
-            <button 
-              onClick={() => handleDeleteRecord(selectedRecord.id, selectedRecord.image_url)}
-              className="p-2 -mr-2 text-red-500 active:bg-red-50 rounded-full transition-colors flex items-center justify-center"
-              title="Delete Record"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
           </header>
 
           <div className="px-2">
